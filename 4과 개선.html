@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lesson 4: Build a Better World - 최종 완성본 (해석 버그 수정)</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;600;700&family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root {
+            --c-subject: #3b82f6;    /* 주어: 파랑 */
+            --c-verb: #ef4444;       /* 동사: 빨강 */
+            --c-complement: #10b981; /* 보어: 초록 */
+            --c-object: #92400e;     /* 목적어: 고동색/갈색 */
+            --c-adverbial: #8b5cf6;  /* 부사어: 보라 */
+            --c-modifier: #6b7280;   /* 수식어: 회색 */
+            --bg-gradient: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            --card-shadow: 0 10px 25px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+
+        body { font-family: 'Noto Sans KR', sans-serif; line-height: 1.7; background: var(--bg-gradient); }
+        .main-container { background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(12px); border-radius: 20px; box-shadow: var(--card-shadow); border: 1px solid rgba(255, 255, 255, 0.18); }
+        
+        .sentence-container {
+            margin-bottom: 1.5rem; padding: 2rem; border-radius: 16px;
+            background: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%);
+            border: 1px solid #e2e8f0; box-shadow: 0 8px 20px -6px rgba(0, 0, 0, 0.08);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); position: relative;
+        }
+        .sentence-container::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px; background: linear-gradient(90deg, var(--c-subject), var(--c-verb)); opacity: 0; transition: opacity 0.3s ease; }
+        .sentence-container:hover { transform: translateY(-3px); box-shadow: 0 12px 30px -8px rgba(0, 0, 0, 0.12); }
+        .sentence-container:hover::before { opacity: 1; }
+        
+        .english-sentence { font-family: 'Roboto', sans-serif; font-size: 1.35rem; line-height: 1.6; margin-bottom: 1.2rem; font-weight: 500; }
+        
+        /* 버그 수정: display: none; 속성을 제거하여 JavaScript가 hidden 속성을 제어할 수 있도록 함 */
+        .korean-translation {
+            /* display: none; 이 속성이 문제의 원인이었습니다. */
+            font-size: 1.05rem; color: #475569; background: #f1f5f9; 
+            padding: 1.5rem; border-radius: 12px; margin-top: 1.5rem; 
+            border-left: 4px solid var(--c-subject);
+            animation: slideDown 0.4s ease-out;
+        }
+        .korean-translation[hidden] {
+            display: none; /* hidden 속성이 있을 때만 숨겨지도록 수정 */
+        }
+        @keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+
+        .subject { color: var(--c-subject); } .verb { color: var(--c-verb); } .complement { color: var(--c-complement); } .object { color: var(--c-object); } .adverbial { color: var(--c-adverbial); }
+        .english-sentence span[data-tooltip] { font-weight: 600; }
+        .modifier { border-bottom: 2px dotted var(--c-modifier); padding-bottom: 2px; }
+
+        /* 학습 단계별 스타일 */
+        .level-2 .english-sentence span[data-tooltip] { color: #374151; transition: all 0.3s ease; cursor: pointer; padding: 2px 4px; border-radius: 4px; }
+        .level-2 .subject:hover { color: var(--c-subject); background-color: rgba(59, 130, 246, 0.1); }
+        .level-2 .verb:hover { color: var(--c-verb); background-color: rgba(239, 68, 68, 0.1); }
+        .level-2 .complement:hover { color: var(--c-complement); background-color: rgba(16, 185, 129, 0.1); }
+        .level-2 .object:hover { color: var(--c-object); background-color: rgba(146, 64, 14, 0.1); }
+        .level-2 .adverbial:hover { color: var(--c-adverbial); background-color: rgba(139, 92, 246, 0.1); }
+        .level-3 .english-sentence span, .level-4 .english-sentence span { color: #374151; font-weight: 400; }
+        .level-3 .modifier { border-bottom: 2px dotted #9ca3af; }
+        .level-4 .modifier { border-bottom: none; }
+        .level-4.revealed .subject { color: var(--c-subject); font-weight: 600; }
+        .level-4.revealed .verb { color: var(--c-verb); font-weight: 600; }
+        .level-4.revealed .complement { color: var(--c-complement); font-weight: 600; }
+        .level-4.revealed .object { color: var(--c-object); font-weight: 600; }
+        .level-4.revealed .adverbial { color: var(--c-adverbial); font-weight: 600; }
+        .level-4.revealed .modifier { border-bottom: 2px dotted var(--c-modifier); }
+
+        /* UI 컴포넌트 */
+        h1 { background: linear-gradient(135deg, #1e293b, #475569); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-weight: 800; font-size: 2.5rem; }
+        h2, h3 { font-weight: 700; color: #1e293b; position: relative; padding-bottom: 1rem; margin-bottom: 2rem; }
+        h2::after, h3::after { content: ''; position: absolute; bottom: 0; left: 0; width: 60px; height: 3px; background: linear-gradient(90deg, var(--c-subject), var(--c-verb)); border-radius: 2px; }
+        .control-panel { background: #f8fafc; padding: 2rem; border-radius: 16px; margin-bottom: 3rem; border: 1px solid #e2e8f0; }
+        .control-btn { background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); color: white; padding: 0.75rem 1.5rem; border-radius: 10px; font-size: 0.95rem; font-weight: 600; cursor: pointer; transition: all 0.3s; border: none; box-shadow: 0 4px 8px -2px rgba(79, 70, 229, 0.3); }
+        .control-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 16px -4px rgba(79, 70, 229, 0.4); }
+        .control-btn.active { background: linear-gradient(135deg, #10b981 0%, #059669 100%); }
+        .level-selector label { font-weight: 600; margin-right: 1rem; color: #374151; }
+        .level-selector select { padding: 0.75rem 1rem; border-radius: 10px; border: 2px solid #d1d5db; font-weight: 500; cursor: pointer; }
+        .level-selector select:focus { outline: none; border-color: var(--c-subject); box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2); }
+        .reveal-answer-btn { background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); }
+
+        [data-tooltip] { position: relative; cursor: help; }
+        [data-tooltip]:focus { outline: 2px solid var(--c-subject); outline-offset: 2px; border-radius: 4px; }
+        [data-tooltip]::after, [data-tooltip]::before {
+            position: absolute; left: 50%; transform: translateX(-50%);
+            opacity: 0; visibility: hidden; transition: all 0.3s; z-index: 20;
+        }
+        [data-tooltip]::after { content: attr(data-tooltip); bottom: 130%; background: #1f293b; color: white; padding: 0.5rem 1rem; border-radius: 8px; font-size: 0.875rem; font-weight: 500; white-space: nowrap; }
+        [data-tooltip]::before { content: ''; bottom: 120%; border: 6px solid transparent; border-top-color: #1f293b; }
+        [data-tooltip]:hover::after, [data-tooltip]:hover::before,
+        [data-tooltip]:focus::after, [data-tooltip]:focus::before { opacity: 1; visibility: visible; transform: translateX(-50%) translateY(-4px); }
+    </style>
+</head>
+<body class="min-h-screen p-4 md:p-8">
+    <div class="max-w-5xl mx-auto main-container p-6 md:p-10">
+        <header class="text-center mb-12">
+            <h1>Lesson 4: Build a Better World</h1>
+            <p class="text-xl text-slate-600 mt-4 font-light">피드백 반영 최종 완성본</p>
+            <div id="color-legend" class="mt-6 flex justify-center flex-wrap gap-2 text-sm">
+                <span class="px-3 py-1 bg-blue-100 text-blue-800 rounded-full">주어(S)</span>
+                <span class="px-3 py-1 bg-red-100 text-red-800 rounded-full">동사(V)</span>
+                <span class="px-3 py-1 bg-green-100 text-green-800 rounded-full">보어(C)</span>
+                <span class="px-3 py-1 bg-amber-100 text-amber-800 rounded-full">목적어(O)</span>
+                <span class="px-3 py-1 bg-purple-100 text-purple-800 rounded-full">부사어(A)</span>
+            </div>
+        </header>
+
+        <div class="control-panel flex flex-wrap items-center justify-between gap-6">
+            <div class="level-selector flex items-center">
+                <label for="learning-level">학습 레벨:</label>
+                <select id="learning-level">
+                    <option value="level-1" selected>레벨 1: 전체 분석 보기</option>
+                    <option value="level-2">레벨 2: 마우스 올리면 분석</option>
+                    <option value="level-3">레벨 3: 수식어만 표시</option>
+                    <option value="level-4">레벨 4: 스스로 도전</option>
+                </select>
+            </div>
+            <div class="flex gap-3">
+                <button id="toggle-all-btn" class="control-btn">모든 해석 보기</button>
+            </div>
+        </div>
+
+        <main id="main-content">
+            <!-- JavaScript를 통해 본문이 동적으로 채워집니다. -->
+        </main>
+
+        <div class="mt-12 text-center">
+            <div class="inline-flex items-center space-x-3 text-sm text-slate-600">
+                <span>학습 진도율:</span>
+                <div class="w-40 h-2.5 bg-slate-200 rounded-full overflow-hidden">
+                    <div id="progress-bar" class="h-full bg-gradient-to-r from-blue-500 to-purple-500 transition-all duration-500" style="width: 0%"></div>
+                </div>
+                <span id="progress-text" class="font-bold">0%</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class GrammarAnalyzer {
+            constructor(data) {
+                this.data = data;
+                this.state = {
+                    currentLevel: 'level-1',
+                    completedSentences: new Set(),
+                    allTranslationsVisible: false
+                };
+                try {
+                    this.init();
+                } catch (error) {
+                    console.error("애플리케이션 초기화 실패:", error);
+                    document.body.innerHTML = `<div class="text-center p-8">학습 도구를 불러오는 데 실패했습니다. 페이지를 새로고침하거나 관리자에게 문의하세요. 오류: ${error.message}</div>`;
+                }
+            }
+
+            init() {
+                this.cacheDOMElements();
+                this.renderContent();
+                this.bindGlobalEvents();
+                this.loadState();
+            }
+
+            cacheDOMElements() {
+                this.elements = {
+                    mainContent: document.getElementById('main-content'),
+                    levelSelector: document.getElementById('learning-level'),
+                    toggleAllBtn: document.getElementById('toggle-all-btn'),
+                    progressBar: document.getElementById('progress-bar'),
+                    progressText: document.getElementById('progress-text'),
+                };
+            }
+
+            renderContent() {
+                let contentHTML = '';
+                this.data.forEach((section, sectionIndex) => {
+                    contentHTML += `<h2 class="text-3xl text-gray-800">${section.title}</h2>`;
+                    section.sentences.forEach((sentence, sentenceIndex) => {
+                        const uniqueId = `s-${sectionIndex}-${sentenceIndex}`;
+                        const translationId = `tr-${uniqueId}`;
+                        contentHTML += `
+                            <div class="sentence-container" id="${uniqueId}">
+                                <p class="english-sentence">${sentence.english}</p>
+                                <div class="flex gap-2 mt-4">
+                                    <button class="control-btn toggle-btn text-sm px-4 py-2" aria-expanded="false" aria-controls="${translationId}">해석 보기</button>
+                                    <button class="control-btn reveal-answer-btn text-sm px-4 py-2" aria-controls="${translationId}">정답 확인</button>
+                                </div>
+                                <p class="korean-translation" id="${translationId}" hidden>${sentence.korean}</p>
+                            </div>
+                        `;
+                    });
+                });
+                this.elements.mainContent.innerHTML = contentHTML;
+                this.elements.sentenceContainers = document.querySelectorAll('.sentence-container');
+            }
+            
+            bindGlobalEvents() {
+                this.elements.levelSelector.addEventListener('change', (e) => this.handleLevelChange(e.target.value));
+                this.elements.toggleAllBtn.addEventListener('click', () => this.toggleAllTranslations());
+                
+                this.elements.mainContent.addEventListener('click', (e) => {
+                    const toggleBtn = e.target.closest('.toggle-btn');
+                    const revealBtn = e.target.closest('.reveal-answer-btn');
+                    if (toggleBtn) this.toggleTranslation(toggleBtn);
+                    else if (revealBtn) this.revealAnswer(revealBtn);
+                });
+            }
+
+            handleLevelChange(level) {
+                this.state.currentLevel = level;
+                this.applyLevel(level);
+                this.saveState();
+            }
+            
+            applyLevel(level) {
+                this.elements.mainContent.className = '';
+                this.elements.mainContent.classList.add(level);
+                this.resetSentenceStates();
+            }
+
+            resetSentenceStates() {
+                this.elements.sentenceContainers.forEach(container => {
+                    container.classList.remove('revealed');
+                    const translation = container.querySelector('.korean-translation');
+                    const toggleBtn = container.querySelector('.toggle-btn');
+                    if (translation) translation.hidden = true;
+                    if (toggleBtn) {
+                        toggleBtn.classList.remove('active');
+                        toggleBtn.setAttribute('aria-expanded', 'false');
+                        toggleBtn.textContent = '해석 보기';
+                    }
+                });
+                this.elements.toggleAllBtn.textContent = '모든 해석 보기';
+                this.elements.toggleAllBtn.classList.remove('active');
+                this.state.allTranslationsVisible = false;
+                this.updateButtonVisibility();
+            }
+            
+            updateButtonVisibility() {
+                const isLevel4 = this.state.currentLevel === 'level-4';
+                this.elements.sentenceContainers.forEach(container => {
+                    container.querySelector('.toggle-btn').style.display = isLevel4 ? 'none' : 'inline-block';
+                    container.querySelector('.reveal-answer-btn').style.display = isLevel4 ? 'inline-block' : 'none';
+                });
+            }
+
+            toggleTranslation(button) {
+                const translation = document.getElementById(button.getAttribute('aria-controls'));
+                if (!translation) return;
+                const isShowing = button.getAttribute('aria-expanded') === 'false';
+                button.setAttribute('aria-expanded', isShowing);
+                button.classList.toggle('active', isShowing);
+                button.textContent = isShowing ? '해석 닫기' : '해석 보기';
+                translation.hidden = !isShowing;
+                const containerId = button.closest('.sentence-container').id;
+                this.updateCompletion(containerId, isShowing);
+            }
+
+            revealAnswer(button) {
+                const container = button.closest('.sentence-container');
+                const translation = document.getElementById(button.getAttribute('aria-controls'));
+                if (!container || !translation) return;
+                container.classList.add('revealed');
+                translation.hidden = false;
+                this.updateCompletion(container.id, true);
+            }
+
+            toggleAllTranslations() {
+                if (this.state.currentLevel === 'level-4') return;
+                this.state.allTranslationsVisible = !this.state.allTranslationsVisible;
+                const isShowing = this.state.allTranslationsVisible;
+                this.elements.toggleAllBtn.textContent = isShowing ? '모든 해석 닫기' : '모든 해석 보기';
+                this.elements.toggleAllBtn.classList.toggle('active', isShowing);
+                this.elements.sentenceContainers.forEach(container => {
+                    const button = container.querySelector('.toggle-btn');
+                    const translation = container.querySelector('.korean-translation');
+                    if (button && translation) {
+                        button.setAttribute('aria-expanded', isShowing);
+                        button.classList.toggle('active', isShowing);
+                        button.textContent = isShowing ? '해석 닫기' : '해석 보기';
+                        translation.hidden = !isShowing;
+                        this.updateCompletion(container.id, isShowing);
+                    }
+                });
+            }
+            
+            updateCompletion(id, isCompleted) {
+                if (isCompleted) this.state.completedSentences.add(id);
+                else this.state.completedSentences.delete(id);
+                this.updateProgress();
+                this.saveState();
+            }
+
+            updateProgress() {
+                const total = this.elements.sentenceContainers.length;
+                if (total === 0) return;
+                const completedCount = this.state.completedSentences.size;
+                const percentage = Math.round((completedCount / total) * 100);
+                this.elements.progressBar.style.width = `${percentage}%`;
+                this.elements.progressText.textContent = `${percentage}%`;
+            }
+
+            saveState() {
+                try {
+                    const stateToSave = { currentLevel: this.state.currentLevel, completedSentences: Array.from(this.state.completedSentences) };
+                    localStorage.setItem('grammarAnalyzerState', JSON.stringify(stateToSave));
+                } catch (e) { console.warn("상태 저장 실패:", e); }
+            }
+
+            loadState() {
+                try {
+                    const savedState = localStorage.getItem('grammarAnalyzerState');
+                    if (savedState) {
+                        const parsedState = JSON.parse(savedState);
+                        this.state.currentLevel = parsedState.currentLevel || 'level-1';
+                        this.state.completedSentences = new Set(parsedState.completedSentences || []);
+                        this.elements.levelSelector.value = this.state.currentLevel;
+                    }
+                } catch (e) {
+                    console.warn("상태 불러오기 실패:", e);
+                    this.state.currentLevel = 'level-1';
+                    this.state.completedSentences = new Set();
+                }
+                this.applyLevel(this.state.currentLevel);
+                this.updateProgress();
+            }
+        }
+
+        const lessonData = [
+            {
+                title: "본문 1",
+                sentences: [
+                    { english: `<span class="subject" data-tooltip="주어(S)" tabindex="0" aria-label="주어">Yunju, a high school student</span>, <span class="verb" data-tooltip="동사(V)" tabindex="0" aria-label="동사">went</span> <span class="adverbial" data-tooltip="부사어(A)" tabindex="0" aria-label="부사어">to a Korean art exhibition</span>.`, korean: "고등학생인 윤주는 한국 미술 전시회에 갔었다." },
+                    { english: `<span class="subject" data-tooltip="주어(S)" tabindex="0" aria-label="주어">She</span> <span class="verb" data-tooltip="동사(V)" tabindex="0" aria-label="동사">wrote</span> <span class="object" data-tooltip="목적어(O)" tabindex="0" aria-label="목적어">a report about her experience</span> <span class="adverbial" data-tooltip="부사어(A)" tabindex="0" aria-label="부사어">to share with her class</span>.`, korean: "그녀는 반 친구들과 공유하기 위해 그녀의 경험에 대한 보고서를 작성했다." },
+                    { english: `<span class="adverbial" data-tooltip="부사어(A)" tabindex="0" aria-label="부사어">Last week</span>, <span class="subject" data-tooltip="주어(S)" tabindex="0" aria-label="주어">I</span> <span class="verb" data-tooltip="동사(V)" tabindex="0" aria-label="동사">visited</span> <span class="object" data-tooltip="목적어(O)" tabindex="0" aria-label="목적어">an exhibition of artwork and ancient items <span class="modifier">selected from the Kansong Art Museum's collection</span></span>.`, korean: "지난주, 나는 간송 미술관 소장품에서 선별된 미술품과 골동품 전시회에 방문했다." },
+                    { english: `<span class="subject" data-tooltip="주어(S)" tabindex="0" aria-label="주어">The exhibition</span> <span class="verb" data-tooltip="동사(V)" tabindex="0" aria-label="동사">included</span> <span class="object" data-tooltip="목적어(O)" tabindex="0" aria-label="목적어">information about the man <span class="modifier">who gathered all of the artwork displayed there</span></span>.`, korean: "그 전시회는 그곳에 전시된 모든 미술품을 모은 남자에 대한 정보를 포함했다." },
+                    { english: `<span class="subject" data-tooltip="주어(S)" tabindex="0" aria-label="주어">His name</span> <span class="verb" data-tooltip="동사(V)" tabindex="0" aria-label="동사">was</span> <span class="complement" data-tooltip="주격보어(SC)" tabindex="0" aria-label="주격보어">Jeon Hyeongpil</span>, but <span class="subject" data-tooltip="주어(S)" tabindex="0" aria-label="주어">he</span> <span class="verb" data-tooltip="동사(V)" tabindex="0" aria-label="동사">is</span> <span class="adverbial" data-tooltip="부사어(A)" tabindex="0" aria-label="부사어">better</span> <span class="verb" data-tooltip="동사(V)" tabindex="0" aria-label="동사">known</span> <span class="adverbial" data-tooltip="부사어(A)" tabindex="0" aria-label="부사어">by his pen name, Kansong</span>.`, korean: "그의 이름은 전형필이지만, 그는 필명인 간송으로 더 잘 알려져 있다." },
+                    { english: `<span class="subject" data-tooltip="주어(S)" tabindex="0" aria-label="주어">He</span> <span class="verb" data-tooltip="동사(V)" tabindex="0" aria-label="동사">was born</span> <span class="adverbial" data-tooltip="부사어(A)" tabindex="0" aria-label="부사어">into a rich family</span> <span class="adverbial" data-tooltip="부사어(A)" tabindex="0" aria-label="부사어">in 1906</span> and <span class="verb" data-tooltip="동사(V)" tabindex="0" aria-label="동사">lived through</span> <span class="object" data-tooltip="목적어(O)" tabindex="0" aria-label="목적어">the Japanese occupation of Korea</span>.`, korean: "그는 1906년 부유한 집안에서 태어났고 한국의 일제 강점기를 겪었다." },
+                    { english: `<span class="adverbial" data-tooltip="부사어(A)" tabindex="0" aria-label="부사어">At the age of 24</span>, <span class="subject" data-tooltip="주어(S)" tabindex="0" aria-label="주어">he</span> <span class="verb" data-tooltip="동사(V)" tabindex="0" aria-label="동사">inherited</span> <span class="object" data-tooltip="목적어(O)" tabindex="0" aria-label="목적어">a massive fortune</span>.`, korean: "24세에, 그는 막대한 재산을 물려받았다." },
+                    { english: `<span class="adverbial" data-tooltip="부사어(A)" tabindex="0" aria-label="부사어"><span class="modifier">After carefully thinking about what he could do for his country</span></span>, <span class="subject" data-tooltip="주어(S)" tabindex="0" aria-label="주어">he</span> <span class="verb" data-tooltip="동사(V)" tabindex="0" aria-label="동사">decided</span> <span class="object" data-tooltip="목적어(O)" tabindex="0" aria-label="목적어">to use the money to protect Korea's cultural heritage from the Japanese</span>.`, korean: "조국을 위해 자신이 무엇을 할 수 있을지에 대해 심사숙고한 후에, 그는 일본으로부터 한국의 문화유산을 보호하는 데 그 돈을 쓰기로 결심했다." },
+                    { english: `<span class="subject" data-tooltip="주어(S)" tabindex="0" aria-label="주어">This decision</span> <span class="verb" data-tooltip="동사(V)" tabindex="0" aria-label="동사">was</span> <span class="adverbial" data-tooltip="부사어(A)" tabindex="0" aria-label="부사어">greatly</span> <span class="verb" data-tooltip="동사(V)" tabindex="0" aria-label="동사">influenced</span> <span class="adverbial" data-tooltip="부사어(A)" tabindex="0" aria-label="부사어">by his mentor, Oh Sechang, <span class="modifier">who was an independence activist and had keen insight into Korean art</span></span>.`, korean: "이 결정은 그의 스승인 오세창에 의해 크게 영향을 받았는데, 오세창은 독립 운동가이면서 한국 미술에 날카로운 통찰력을 가지고 있었다." },
+                    { english: `<span class="adverbial" data-tooltip="부사어(A)" tabindex="0" aria-label="부사어">With Oh's guidance and his own convictions</span>, <span class="subject" data-tooltip="주어(S)" tabindex="0" aria-label="주어">Kansong</span> <span class="verb" data-tooltip="동사(V)" tabindex="0" aria-label="동사">devoted</span> <span class="object" data-tooltip="목적어(O)" tabindex="0" aria-label="목적어">most of his fortune</span> <span class="adverbial" data-tooltip="부사어(A)" tabindex="0" aria-label="부사어">to acquiring old books, paintings, and other works of art</span>.`, korean: "오세창의 지도와 자신의 강한 신념으로, 간송은 그의 재산 대부분을 오래된 책, 그림, 그리고 다른 미술품을 획득하는 데 바쳤다." },
+                    { english: `<span class="subject" data-tooltip="주어(S)" tabindex="0" aria-label="주어">He</span> <span class="verb" data-tooltip="동사(V)" tabindex="0" aria-label="동사">considered</span> <span class="object" data-tooltip="목적어(O)" tabindex="0" aria-label="목적어">these items</span> <span class="complement" data-tooltip="목적보어(OC)" tabindex="0" aria-label="목적보어">the pride of the nation</span> and <span class="verb" data-tooltip="동사(V)" tabindex="0" aria-label="동사">believed</span> <span class="object" data-tooltip="목적어(O)" tabindex="0" aria-label="목적어"><span class="modifier">they represented the national spirit</span></span>.`, korean: "그는 이러한 물품들을 나라의 긍지로 여겼고, 그것들이 민족혼을 나타낸다고 믿었다." },
+                    { english: `<span class="adverbial" data-tooltip="부사어(A)" tabindex="0" aria-label="부사어">Without his actions</span>, <span class="subject" data-tooltip="주어(S)" tabindex="0" aria-label="주어">they</span> <span class="verb" data-tooltip="동사(V)" tabindex="0" aria-label="동사">would have been destroyed</span> or <span class="verb" data-tooltip="동사(V)" tabindex="0" aria-label="동사">taken</span> <span class="adverbial" data-tooltip="부사어(A)" tabindex="0" aria-label="부사어">overseas</span>.`, korean: "그의 행동이 없었다면, 그것들은 파괴되거나 해외로 반출되었을 것이다." }
+                ]
+            },
+            {
+                title: "본문 2",
+                sentences: [
+                    { english: `<span class="adverbial" data-tooltip="부사어(A)" tabindex="0" aria-label="부사어"><span class="modifier">As soon as I walked in</span></span>, <span class="subject" data-tooltip="주어(S)" tabindex="0" aria-label="주어">I</span> <span class="verb" data-tooltip="동사(V)" tabindex="0" aria-label="동사">could not help but admire</span> <span class="object" data-tooltip="목적어(O)" tabindex="0" aria-label="목적어">some ink-and-water paintings by Jeong Seon, a famous Korean artist <span class="modifier">also known as Gyeomjae</span></span>.`, korean: "나는 들어가자마자 겸재로도 알려진 유명한 한국 화가 정선이 그린 수묵화 몇 점을 감탄하여 바라보지 않을 수 없었다." },
+                    { english: `<span class="subject" data-tooltip="주어(S)" tabindex="0" aria-label="주어">These paintings</span> <span class="verb" data-tooltip="동사(V)" tabindex="0" aria-label="동사">were kept</span> <span class="adverbial" data-tooltip="부사어(A)" tabindex="0" aria-label="부사어">in an album <span class="modifier">called the Haeak jeonsincheop</span></span>.`, korean: "이 그림들은 해악전신첩이라고 불리는 화첩에 들어 있었다." },
+                    { english: `<span class="subject" data-tooltip="주어(S)" tabindex="0" aria-label="주어">They</span> <span class="verb" data-tooltip="동사(V)" tabindex="0" aria-label="동사">depict</span> <span class="object" data-tooltip="목적어(O)" tabindex="0" aria-label="목적어">the beautiful scenery of Geumgangsan Mountain and its surrounding areas</span>.`, korean: "그것들은 금강산과 주변 지역의 아름다운 경치를 묘사한다." },
+                    { english: `<span class="subject" data-tooltip="주어(S)" tabindex="0" aria-label="주어"><span class="modifier">The way Gyeomjae painted the mountains, rivers, and valleys</span></span> <span class="verb" data-tooltip="동사(V)" tabindex="0" aria-label="동사">makes</span> <span class="object" data-tooltip="목적어(O)" tabindex="0" aria-label="목적어">them</span> <span class="complement" data-tooltip="목적보어(OC)" tabindex="0" aria-label="목적보어">look very inviting</span>.`, korean: "겸재가 산과 강, 계곡을 그린 방식은 그것들을 매우 매력적으로 보이게 한다." },
+                    { english: `<span class="subject" data-tooltip="주어(S)" tabindex="0" aria-label="주어">I</span> <span class="verb" data-tooltip="동사(V)" tabindex="0" aria-label="동사">was shocked</span> <span class="adverbial" data-tooltip="부사어(A)" tabindex="0" aria-label="부사어"><span class="modifier">when the museum tour guide said that the album was almost burned as kindling</span></span>.`, korean: "나는 미술관 안내원이 그 화첩이 불쏘시개로 태워질 뻔했다고 말했을 때 충격을 받았다." },
+                    { english: `<span class="adverbial" data-tooltip="부사어(A)" tabindex="0" aria-label="부사어">Fortunately</span>, <span class="subject" data-tooltip="주어(S)" tabindex="0" aria-label="주어">it</span> <span class="verb" data-tooltip="동사(V)" tabindex="0" aria-label="동사">was rescued</span> <span class="adverbial" data-tooltip="부사어(A)" tabindex="0" aria-label="부사어">at the last minute</span> and <span class="adverbial" data-tooltip="부사어(A)" tabindex="0" aria-label="부사어">later</span> <span class="verb" data-tooltip="동사(V)" tabindex="0" aria-label="동사">purchased</span> <span class="adverbial" data-tooltip="부사어(A)" tabindex="0" aria-label="부사어">by Kansong</span>.`, korean: "다행히도, 그것은 마지막 순간에 구해졌고 후에 간송에 의해 매입되었다." },
+                    { english: `<span class="subject" data-tooltip="주어(S)" tabindex="0" aria-label="주어"><span class="modifier">Knowing that these beautiful paintings were nearly turned to ashes</span></span> <span class="verb" data-tooltip="동사(V)" tabindex="0" aria-label="동사">made</span> <span class="object" data-tooltip="목적어(O)" tabindex="0" aria-label="목적어">me</span> <span class="complement" data-tooltip="목적보어(OC)" tabindex="0" aria-label="목적보어">feel very sad</span>.`, korean: "이 아름다운 그림들이 재가 될 뻔했다는 것을 알고 나는 매우 슬펐다." },
+                    { english: `<span class="subject" data-tooltip="주어(S)" tabindex="0" aria-label="주어">I</span> <span class="verb" data-tooltip="동사(V)" tabindex="0" aria-label="동사">am thankful</span> <span class="adverbial" data-tooltip="부사어(A)" tabindex="0" aria-label="부사어"><span class="modifier">that these paintings are still around so that future generations can also appreciate them</span></span>.`, korean: "나는 미래 세대 또한 이 그림들을 감상할 수 있게 그것들이 여전히 주변에 존재한다는 것에 감사한다." }
+                ]
+            },
+            {
+                title: "본문 3",
+                sentences: [
+                    { english: `<span class="subject" data-tooltip="주어(S)" tabindex="0" aria-label="주어">The next item <span class="modifier">that impressed me</span></span> <span class="verb" data-tooltip="동사(V)" tabindex="0" aria-label="동사">was</span> <span class="complement" data-tooltip="주격보어(SC)" tabindex="0" aria-label="주격보어">a gorgeous porcelain vase <span class="modifier">called the Celadon Prunus Vase with Inlaid Cloud and Crane Design</span></span>.`, korean: "나에게 감명을 준 다음 물품은 「청자 상감운학문 매병」이라고 불리는 아주 멋진 자기 화병이었다." },
+                    { english: `<span class="subject" data-tooltip="주어(S)" tabindex="0" aria-label="주어">It</span> <span class="verb" data-tooltip="동사(V)" tabindex="0" aria-label="동사">is</span> <span class="complement" data-tooltip="주격보어(SC)" tabindex="0" aria-label="주격보어">a pleasant shade of green</span>, <span class="adverbial" data-tooltip="부사어(A)" tabindex="0" aria-label="부사어">with a lovely pattern of clouds and cranes encircling the entire vase</span>.`, korean: "그것은 아름다운 구름과 학무늬가 화병 전체를 둘러싸고 있으며 기분 좋은 녹색 계열의 색을 띠고 있다." },
+                    { english: `<span class="subject" data-tooltip="주어(S)" tabindex="0" aria-label="주어">The cranes</span> <span class="verb" data-tooltip="동사(V)" tabindex="0" aria-label="동사">seem</span> <span class="complement" data-tooltip="주격보어(SC)" tabindex="0" aria-label="주격보어">to be alive and stretching their wings in search of freedom</span>.`, korean: "그 학들은 살아서 자유를 찾아 날개를 뻗고 있는 것처럼 보인다." },
+                    { english: `<span class="subject" data-tooltip="주어(S)" tabindex="0" aria-label="주어">Kansong</span> <span class="verb" data-tooltip="동사(V)" tabindex="0" aria-label="동사">bought</span> <span class="object" data-tooltip="목적어(O)" tabindex="0" aria-label="목적어">the vase</span> <span class="adverbial" data-tooltip="부사어(A)" tabindex="0" aria-label="부사어">from a Japanese art dealer</span> <span class="adverbial" data-tooltip="부사어(A)" tabindex="0" aria-label="부사어">in 1935</span>.`, korean: "간송은 1935년에 일본인 미술상으로부터 그 화병을 샀다." },
+                    { english: `<span class="adverbial" data-tooltip="부사어(A)" tabindex="0" aria-label="부사어">With the money <span class="modifier">he spent on it</span></span>, <span class="subject" data-tooltip="주어(S)" tabindex="0" aria-label="주어">Kansong</span> <span class="verb" data-tooltip="동사(V)" tabindex="0" aria-label="동사">could have bought</span> <span class="object" data-tooltip="목적어(O)" tabindex="0" aria-label="목적어">20 nice houses</span>!`, korean: "간송은 그것에 쓴 돈으로 좋은 집 20채를 살 수도 있었다!" },
+                    { english: `<span class="adverbial" data-tooltip="부사어(A)" tabindex="0" aria-label="부사어">Later</span>, <span class="subject" data-tooltip="주어(S)" tabindex="0" aria-label="주어">a different Japanese collector</span> <span class="verb" data-tooltip="동사(V)" tabindex="0" aria-label="동사">offered</span> <span class="object" data-tooltip="목적어(O)" tabindex="0" aria-label="목적어">double the price <span class="modifier">Kansong had paid for the vase</span></span>.`, korean: "후에, 다른 일본인 수집가가 간송이 그 화병에 지급했던 금액의 두 배를 제안했다." },
+                    { english: `<span class="adverbial" data-tooltip="부사어(A)" tabindex="0" aria-label="부사어">However</span>, <span class="subject" data-tooltip="주어(S)" tabindex="0" aria-label="주어">Kansong</span> <span class="verb" data-tooltip="동사(V)" tabindex="0" aria-label="동사">refused</span> <span class="object" data-tooltip="목적어(O)" tabindex="0" aria-label="목적어">to part with it</span> <span class="adverbial" data-tooltip="부사어(A)" tabindex="0" aria-label="부사어"><span class="modifier">because he knew that it was the most magnificent vase of its kind</span></span>.`, korean: "하지만, 간송은 그것이 그런 종류의 화병 중에서 가장 아름다운 화병이라는 것을 알고 있었기 때문에 그것을 내주는 것을 거절했다." },
+                    { english: `<span class="adverbial" data-tooltip="부사어(A)" tabindex="0" aria-label="부사어">Today</span> <span class="subject" data-tooltip="주어(S)" tabindex="0" aria-label="주어">it</span> <span class="verb" data-tooltip="동사(V)" tabindex="0" aria-label="동사">is listed</span> <span class="adverbial" data-tooltip="부사어(A)" tabindex="0" aria-label="부사어">as one of Korea's National Treasures</span>.`, korean: "오늘날 그것은 한국의 국보 중 하나로 등록되어 있다." },
+                    { english: `<span class="subject" data-tooltip="주어(S)" tabindex="0" aria-label="주어">Seeing it in person</span> <span class="verb" data-tooltip="동사(V)" tabindex="0" aria-label="동사">was</span> <span class="complement" data-tooltip="주격보어(SC)" tabindex="0" aria-label="주격보어">an absolutely breathtaking experience</span>!`, korean: "그것을 직접 보는 것은 정말로 숨이 막히는 경험이었다!" }
+                ]
+            },
+            {
+                title: "본문 4",
+                sentences: [
+                    { english: `<span class="adverbial" data-tooltip="부사어(A)" tabindex="0" aria-label="부사어">Finally</span>, <span class="subject" data-tooltip="주어(S)" tabindex="0" aria-label="주어">I</span> <span class="verb" data-tooltip="동사(V)" tabindex="0" aria-label="동사">saw</span> <span class="object" data-tooltip="목적어(O)" tabindex="0" aria-label="목적어">the one item in the museum <span class="modifier">that I will never forget</span></span>—<span class="object" data-tooltip="목적어(O)" tabindex="0" aria-label="목적어">an original copy of the Hunminjeongeum Haerye</span>.`, korean: "마지막으로 나는 미술관에서 절대 잊을 수 없는 한 물품을 보았다. 바로 「훈민정음 해례본」의 원본이다." },
+                    { english: `<span class="subject" data-tooltip="주어(S)" tabindex="0" aria-label="주어">This ancient book</span> <span class="verb" data-tooltip="동사(V)" tabindex="0" aria-label="동사">was written</span> <span class="adverbial" data-tooltip="부사어(A)" tabindex="0" aria-label="부사어">in 1446</span>, and <span class="subject" data-tooltip="주어(S)" tabindex="0" aria-label="주어">it</span> <span class="verb" data-tooltip="동사(V)" tabindex="0" aria-label="동사">explains</span> <span class="object" data-tooltip="목적어(O)" tabindex="0" aria-label="목적어">the ideas and principles behind the creation of Hangeul, the writing system of the Korean language</span>.`, korean: "이 아주 오래된 책은 1446년에 쓰였고, 그것은 한국어의 문자 체계인 한글 창제의 바탕이 되는 발상과 원리를 설명한다." },
+                    { english: `<span class="subject" data-tooltip="주어(S)" tabindex="0" aria-label="주어">It</span> <span class="verb" data-tooltip="동사(V)" tabindex="0" aria-label="동사">was found</span> <span class="adverbial" data-tooltip="부사어(A)" tabindex="0" aria-label="부사어">in Andong</span> <span class="adverbial" data-tooltip="부사어(A)" tabindex="0" aria-label="부사어">in 1940</span>.`, korean: "그것은 1940년에 안동에서 발견되었다." },
+                    { english: `<span class="adverbial" data-tooltip="부사어(A)" tabindex="0" aria-label="부사어">At that time, however</span>, <span class="subject" data-tooltip="주어(S)" tabindex="0" aria-label="주어">Korea</span> <span class="verb" data-tooltip="동사(V)" tabindex="0" aria-label="동사">was</span> <span class="adverbial" data-tooltip="부사어(A)" tabindex="0" aria-label="부사어">still</span> <span class="verb" data-tooltip="동사(V)" tabindex="0" aria-label="동사">occupied</span> <span class="adverbial" data-tooltip="부사어(A)" tabindex="0" aria-label="부사어">by Japan</span>.`, korean: "하지만, 그 당시에 한국은 여전히 일본에 의해 점령된 상태였다." },
+                    { english: `<span class="subject" data-tooltip="주어(S)" tabindex="0" aria-label="주어">The Japanese colonial government</span> <span class="verb" data-tooltip="동사(V)" tabindex="0" aria-label="동사">intended</span> <span class="object" data-tooltip="목적어(O)" tabindex="0" aria-label="목적어">to get rid of the Korean language</span>.`, korean: "일본 식민 정부는 한국어를 없애려 했다." },
+                    { english: `<span class="subject" data-tooltip="주어(S)" tabindex="0" aria-label="주어">Schools</span> <span class="verb" data-tooltip="동사(V)" tabindex="0" aria-label="동사">were forbidden</span> <span class="object" data-tooltip="목적어(O)" tabindex="0" aria-label="목적어">to teach lessons in Korean</span>, and <span class="subject" data-tooltip="주어(S)" tabindex="0" aria-label="주어">scholars <span class="modifier">who studied Korean</span></span> <span class="verb" data-tooltip="동사(V)" tabindex="0" aria-label="동사">were arrested</span>.`, korean: "학교들은 한국어로 수업하는 것을 금지당했고, 한국어를 연구하는 학자들은 체포되었다." }
+                ]
+            },
+            {
+                title: "본문 5",
+                sentences: [
+                    { english: `<span class="adverbial" data-tooltip="부사어(A)" tabindex="0" aria-label="부사어">From the moment <span class="modifier">he heard that the Hunminjeongeum Haerye had been discovered</span></span>, <span class="subject" data-tooltip="주어(S)" tabindex="0" aria-label="주어">Kansong</span> <span class="verb" data-tooltip="동사(V)" tabindex="0" aria-label="동사">couldn't stop thinking</span> <span class="adverbial" data-tooltip="부사어(A)" tabindex="0" aria-label="부사어">about it</span>.`, korean: "「훈민정음 해례본」이 발견되었다는 것을 들은 순간부터, 간송은 그것에 대한 생각을 멈출 수 없었다." },
+                    { english: `<span class="subject" data-tooltip="주어(S)" tabindex="0" aria-label="주어">He</span> <span class="verb" data-tooltip="동사(V)" tabindex="0" aria-label="동사">knew</span> <span class="object" data-tooltip="목적어(O)" tabindex="0" aria-label="목적어"><span class="modifier">he had to protect it at all costs</span></span>.`, korean: "그는 무슨 수를 써서라도 그것을 지켜야만 한다는 것을 알았다." },
+                    { english: `<span class="adverbial" data-tooltip="부사어(A)" tabindex="0" aria-label="부사어">After years of waiting</span>, <span class="subject" data-tooltip="주어(S)" tabindex="0" aria-label="주어">he</span> <span class="verb" data-tooltip="동사(V)" tabindex="0" aria-label="동사">was</span> <span class="adverbial" data-tooltip="부사어(A)" tabindex="0" aria-label="부사어">finally</span> <span class="complement" data-tooltip="주격보어(SC)" tabindex="0" aria-label="주격보어">able to obtain the book</span>.`, korean: "수년간의 기다림 후에, 그는 마침내 그 책을 얻을 수 있었다." },
+                    { english: `<span class="subject" data-tooltip="주어(S)" tabindex="0" aria-label="주어">He</span> <span class="verb" data-tooltip="동사(V)" tabindex="0" aria-label="동사">purchased</span> <span class="object" data-tooltip="목적어(O)" tabindex="0" aria-label="목적어">it</span> <span class="adverbial" data-tooltip="부사어(A)" tabindex="0" aria-label="부사어">at ten times the price <span class="modifier">the owner was asking</span></span> and <span class="adverbial" data-tooltip="부사어(A)" tabindex="0" aria-label="부사어">carefully</span> <span class="verb" data-tooltip="동사(V)" tabindex="0" aria-label="동사">hid</span> <span class="object" data-tooltip="목적어(O)" tabindex="0" aria-label="목적어">it</span> <span class="adverbial" data-tooltip="부사어(A)" tabindex="0" aria-label="부사어">in his house</span>.`, korean: "그는 그것을 소유자가 요구한 가격의 10배에 샀고 그것을 그의 집에 조심스럽게 숨겼다." },
+                    { english: `<span class="adverbial" data-tooltip="부사어(A)" tabindex="0" aria-label="부사어"><span class="modifier">When the Japanese were finally defeated</span></span>, <span class="subject" data-tooltip="주어(S)" tabindex="0" aria-label="주어">he</span> <span class="verb" data-tooltip="동사(V)" tabindex="0" aria-label="동사">was able</span> <span class="complement" data-tooltip="주격보어(SC)" tabindex="0" aria-label="주격보어">to share it with the rest of Korea</span>.`, korean: "마침내 일본이 패망하자, 그는 그것을 한국 국민과 공유할 수 있었다." },
+                    { english: `<span class="subject" data-tooltip="주어(S)" tabindex="0" aria-label="주어">The guide</span> <span class="verb" data-tooltip="동사(V)" tabindex="0" aria-label="동사">said</span> <span class="object" data-tooltip="목적어(O)" tabindex="0" aria-label="목적어"><span class="modifier">that the Hunminjeongeum Haerye is the museum's most precious treasure</span></span>.`, korean: "그 안내원은 「훈민정음 해례본」이 미술관의 가장 소중한 보물이라고 말했다." },
+                    { english: `<span class="adverbial" data-tooltip="부사어(A)" tabindex="0" aria-label="부사어">Without it</span>, <span class="subject" data-tooltip="주어(S)" tabindex="0" aria-label="주어">the origins and fundamentals of Hangeul</span> <span class="verb" data-tooltip="동사(V)" tabindex="0" aria-label="동사">would have been lost</span> <span class="adverbial" data-tooltip="부사어(A)" tabindex="0" aria-label="부사어">to history</span>.`, korean: "그것이 없었다면, 한글의 기원과 기본 원칙은 전해지지 않았을 것이다." },
+                    { english: `<span class="subject" data-tooltip="주어(S)" tabindex="0" aria-label="주어">It</span> <span class="verb" data-tooltip="동사(V)" tabindex="0" aria-label="동사">has since been designated</span> <span class="complement" data-tooltip="주격보어(SC)" tabindex="0" aria-label="주격보어">a National Treasure of Korea</span> and <span class="verb" data-tooltip="동사(V)" tabindex="0" aria-label="동사">included</span> <span class="adverbial" data-tooltip="부사어(A)" tabindex="0" aria-label="부사어">in the UNESCO Memory of the World Register</span>.`, korean: "그것은 이후에 한국의 국보로 지정되었으며 유네스코 세계 기록유산에 포함되었다." },
+                    { english: `<span class="adverbial" data-tooltip="부사어(A)" tabindex="0" aria-label="부사어"><span class="modifier">Looking at the ancient book</span></span>, <span class="subject" data-tooltip="주어(S)" tabindex="0" aria-label="주어">I</span> <span class="verb" data-tooltip="동사(V)" tabindex="0" aria-label="동사">could feel</span> <span class="object" data-tooltip="목적어(O)" tabindex="0" aria-label="목적어">Kansong's strong commitment to preserving Korean history</span>.`, korean: "그 오래된 책을 보면서, 나는 한국 역사를 보호하려는 간송의 강한 의지를 느낄 수 있었다." }
+                ]
+            },
+            {
+                title: "본문 6",
+                sentences: [
+                    { english: `<span class="adverbial" data-tooltip="부사어(A)" tabindex="0" aria-label="부사어"><span class="modifier">Standing in the middle of the exhibition hall, surrounded by Korean art</span></span>, <span class="subject" data-tooltip="주어(S)" tabindex="0" aria-label="주어">I</span> <span class="verb" data-tooltip="동사(V)" tabindex="0" aria-label="동사">could not stop thinking</span> <span class="adverbial" data-tooltip="부사어(A)" tabindex="0" aria-label="부사어">about Kansong</span>.`, korean: "한국 미술품에 둘러싸여 전시장 한가운데에 서서, 나는 간송에 대해 생각하는 것을 멈출 수가 없었다." },
+                    { english: `<span class="subject" data-tooltip="주어(S)" tabindex="0" aria-label="주어">He</span> <span class="verb" data-tooltip="동사(V)" tabindex="0" aria-label="동사">was</span> <span class="complement" data-tooltip="주격보어(SC)" tabindex="0" aria-label="주격보어">an amazing person</span>!`, korean: "그는 놀라운 사람이었다!" },
+                    { english: `<span class="subject" data-tooltip="주어(S)" tabindex="0" aria-label="주어">He</span> <span class="verb" data-tooltip="동사(V)" tabindex="0" aria-label="동사">did not collect</span> <span class="object" data-tooltip="목적어(O)" tabindex="0" aria-label="목적어">art</span> <span class="adverbial" data-tooltip="부사어(A)" tabindex="0" aria-label="부사어">for his personal enjoyment</span>.`, korean: "그는 자신의 개인적인 즐거움을 위해 미술품을 수집하지 않았다." },
+                    { english: `<span class="subject" data-tooltip="주어(S)" tabindex="0" aria-label="주어">He</span> <span class="verb" data-tooltip="동사(V)" tabindex="0" aria-label="동사">did</span> <span class="object" data-tooltip="목적어(O)" tabindex="0" aria-label="목적어">it</span> <span class="adverbial" data-tooltip="부사어(A)" tabindex="0" aria-label="부사어">to protect Korea's cultural identity during the harsh Japanese colonial period</span>.`, korean: "그는 혹독한 일제 강점기 동안 한국의 문화적 독자성을 보호하기 위해 그 일을 했다." },
+                    { english: `<span class="adverbial" data-tooltip="부사어(A)" tabindex="0" aria-label="부사어"><span class="modifier">After Korea regained its independence</span></span>, <span class="subject" data-tooltip="주어(S)" tabindex="0" aria-label="주어">he</span> <span class="verb" data-tooltip="동사(V)" tabindex="0" aria-label="동사">stopped collecting</span> <span class="object" data-tooltip="목적어(O)" tabindex="0" aria-label="목적어">art</span>, <span class="adverbial" data-tooltip="부사어(A)" tabindex="0" aria-label="부사어"><span class="modifier">as he knew it would safely remain in Korea</span></span>.`, korean: "한국이 독립을 되찾은 후에, 그는 미술품을 수집하는 것을 그만두었는데, 그는 미술품이 안전하게 한국에 남아 있으리라는 것을 알고 있었기 때문이다." },
+                    { english: `<span class="adverbial" data-tooltip="부사어(A)" tabindex="0" aria-label="부사어">During our country's worst time</span>, <span class="subject" data-tooltip="주어(S)" tabindex="0" aria-label="주어">a single man</span> <span class="verb" data-tooltip="동사(V)" tabindex="0" aria-label="동사">was able</span> <span class="complement" data-tooltip="주격보어(SC)" tabindex="0" aria-label="주격보어">to defend Korea's national spirit and pride</span>.`, korean: "우리나라의 가장 힘든 시기 동안에, 한 남자가 홀로 한국의 민족혼과 자부심을 지켜낼 수 있었다." },
+                    { english: `<span class="subject" data-tooltip="주어(S)" tabindex="0" aria-label="주어">Thanks to him</span>, <span class="subject" data-tooltip="주어(S)" tabindex="0" aria-label="주어">we</span> <span class="verb" data-tooltip="동사(V)" tabindex="0" aria-label="동사">are</span> <span class="adverbial" data-tooltip="부사어(A)" tabindex="0" aria-label="부사어">still</span> <span class="complement" data-tooltip="주격보어(SC)" tabindex="0" aria-label="주격보어">able to experience an essential part of Korean culture today</span>.`, korean: "그 덕분에, 우리는 오늘날 한국 문화에서 대단히 중요한 부분을 여전히 경험할 수 있다." }
+                ]
+            },
+            {
+                title: "추가 본문",
+                sentences: [
+                    { english: `<span class="adverbial" data-tooltip="부사어(A)" tabindex="0" aria-label="부사어"><span class="modifier">Founded in 1938</span></span>, <span class="subject" data-tooltip="주어(S)" tabindex="0" aria-label="주어">the Kansong Art Museum</span> <span class="verb" data-tooltip="동사(V)" tabindex="0" aria-label="동사">was</span> <span class="complement" data-tooltip="주격보어(SC)" tabindex="0" aria-label="주격보어">Korea's first private museum</span>.`, korean: "1938년에 설립된 간송 미술관은 한국 최초의 사립 미술관이었다." },
+                    { english: `<span class="adverbial" data-tooltip="부사어(A)" tabindex="0" aria-label="부사어"><span class="modifier">When Kansong built it</span></span>, <span class="subject" data-tooltip="주어(S)" tabindex="0" aria-label="주어">he</span> <span class="verb" data-tooltip="동사(V)" tabindex="0" aria-label="동사">named</span> <span class="object" data-tooltip="목적어(O)" tabindex="0" aria-label="목적어">it</span> <span class="complement" data-tooltip="목적보어(OC)" tabindex="0" aria-label="목적보어">Bohwagak</span>.`, korean: "간송이 그것을 지었을 때, 그는 그것을 보화각이라고 이름 지었다." },
+                    { english: `<span class="subject" data-tooltip="주어(S)" tabindex="0" aria-label="주어">He</span> <span class="verb" data-tooltip="동사(V)" tabindex="0" aria-label="동사">used</span> <span class="object" data-tooltip="목적어(O)" tabindex="0" aria-label="목적어">the building</span> <span class="adverbial" data-tooltip="부사어(A)" tabindex="0" aria-label="부사어">as a place to store all of the important cultural items <span class="modifier">he had collected over the years</span></span>.`, korean: "그는 그 건물을 그가 수년 동안 수집한 모든 중요한 문화적 물품들을 보관하는 장소로 사용했다." },
+                    { english: `<span class="subject" data-tooltip="주어(S)" tabindex="0" aria-label="주어">Kansong</span> <span class="verb" data-tooltip="동사(V)" tabindex="0" aria-label="동사">died</span> <span class="adverbial" data-tooltip="부사어(A)" tabindex="0" aria-label="부사어">in 1962</span>, and <span class="subject" data-tooltip="주어(S)" tabindex="0" aria-label="주어">Bohwagak</span> <span class="verb" data-tooltip="동사(V)" tabindex="0" aria-label="동사">was renamed</span> <span class="object" data-tooltip="목적어(O)" tabindex="0" aria-label="목적어">the Kansong Art Museum</span> <span class="adverbial" data-tooltip="부사어(A)" tabindex="0" aria-label="부사어">in 1966</span>.`, korean: "간송은 1962년에 사망했고, 보화각은 1966년에 간송 미술관으로 개명되었다." },
+                    { english: `<span class="subject" data-tooltip="주어(S)" tabindex="0" aria-label="주어">It</span> <span class="adverbial" data-tooltip="부사어(A)" tabindex="0" aria-label="부사어">now</span> <span class="verb" data-tooltip="동사(V)" tabindex="0" aria-label="동사">holds</span> <span class="object" data-tooltip="목적어(O)" tabindex="0" aria-label="목적어">about 5,000 items, <span class="modifier">including 12 Korean National Treasures</span></span>.`, korean: "그것은 현재 한국의 국보 12점을 포함하여 약 5,000점의 물품을 소장하고 있다." }
+                ]
+            }
+        ];
+
+        document.addEventListener('DOMContentLoaded', () => {
+            window.app = new GrammarAnalyzer(lessonData);
+        });
+    </script>
+</body>
+</html>
